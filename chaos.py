@@ -8,6 +8,7 @@ import socketio
 import numpy as np
 import tensorflow as tf 
 
+from flask import Flask
 from nltk.stem import WordNetLemmatizer 
 from tensorflow.keras import Sequential 
 from tensorflow.keras.layers import Dense, Dropout
@@ -16,13 +17,13 @@ nltk.download("wordnet")
 nltk.download('omw-1.4')
 data_file = open('chaos.json').read()
 data = json.loads(data_file)
-sio = socketio.Server()
+sio = socketio.Client()
 
 app = socketio.WSGIApp(sio, static_files={
     '/': {'content_type': 'text/html', 'filename': 'index.html'}
 })
 
-
+companies = [{"id": 1, "name": "Company One"}, {"id": 2, "name": "Company Two"}]
 
 lemmatizer = WordNetLemmatizer()# Each list to create
 words = []
@@ -114,22 +115,55 @@ def get_response(intents_list, intents_json):
 	return result
 
 
-@sio.event
-def connect(sid, environ):
-	print('connect',sid)
+# @sio.event
+# def connect(sid, environ):
+# 	print('connect',sid)
+
+# @sio.event
+# def chatMessage(sid, msg):
+# 	print(f'($): {msg}')
+# 	intents = pred_class(msg, words, classes)
+# 	result = get_response(intents, data)
+# 	sio.emit('message', result)
+
+# @sio.event
+# def disconnect(sid):
+# 	print(f'bye user {sid}')
 
 @sio.event
-def heyleo(sid, data):
-	print(f'($): {data}')
-	intents = pred_class(data, words, classes)
-	result = get_response(intents, data)
-	sio.emit('heyuser', result)
+def connect():
+	print('connection established')
+	sio.emit('message', "hello, I am Leo")
+	sio.wait()
+
+@sio.event
+def message(sid):
+	print(sid)
+	# print(f'($): {msg}')
+	# intents = pred_class(msg, words, classes)
+	# result = get_response(intents, data)
+	# sio.emit('message', result)
+    # print('message received with ', data)
+    # sio.emit("heyleo",get_input())
+    # sio.emit('my response', {'response': 'my response'})
 
 @sio.event
 def disconnect(sid):
+    # print('disconnected from server')
 	print(f'bye user {sid}')
 
-eventlet.wsgi.server(eventlet.listen(('', 5000)), app)
+def get_input():
+    return str(input("($): "))
+
+sio.connect('http://localhost:3000')
+
+# api = Flask(__name__)
+# @api.route('/companies', methods=['GET'])
+# def get_companies():
+#   return json.dumps(companies)
+
+# api.run()
+# eventlet.wsgi.server(eventlet.listen(('', 5000)), app)
 # while True:
 # 	message = input("($): ")
 # 	intents = pred_class(message, words, classes)
