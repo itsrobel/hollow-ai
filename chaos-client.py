@@ -6,14 +6,16 @@ sio = socketio.Client()
 @sio.event
 def connect():
     print('connection established')
-    sio.emit("message", get_input())
+    response = input("($): ")
+    sio.emit("message", response)
     sio.wait()
 
 
 @sio.event
 def message(data):
     print('message received with ', data)
-    sio.emit("message", get_input())
+    response = input("($): ")
+    sio.emit("message", response)
     # sio.emit('my response', {'response': 'my response'})
 
 
@@ -22,8 +24,8 @@ def disconnect():
     print('disconnected from server')
 
 
-def get_input():
-    return str(input("($): "))
+# def get_input():
+#     return str(input("($): "))
 
 
 sio.connect('http://localhost:5000')

@@ -14,16 +14,13 @@ from tensorflow.keras.layers import Dense, Dropout
 nltk.download("punkt")
 nltk.download("wordnet")
 nltk.download('omw-1.4')
-data_file = open('chaos.json').read()
+data_file = open('chaosN.json').read()
 data = json.loads(data_file)
-sio = socketio.Server()
+sio = socketio.Server(cors_allowed_origins='*')
 
 app = socketio.WSGIApp(sio, static_files={
     '/': {'content_type': 'text/html', 'filename': 'index.html'}
 })
-
-companies = [{"id": 1, "name": "Company One"},
-             {"id": 2, "name": "Company Two"}]
 
 lemmatizer = WordNetLemmatizer()  # Each list to create
 words = []
@@ -72,7 +69,7 @@ train_y = np.array(list(training[:, 1]))
 
 input_shape = (len(train_X[0]),)
 output_shape = len(train_y[0])
-epochs = 200  # the deep learning model
+epochs = 400  # the deep learning model
 model = Sequential()
 model.add(Dense(128, input_shape=input_shape, activation="relu"))
 model.add(Dropout(0.5))
@@ -84,7 +81,7 @@ model.compile(loss='categorical_crossentropy',
               optimizer=adam,
               metrics=["accuracy"])
 print(model.summary())
-model.fit(x=train_X, y=train_y, epochs=200, verbose=1)
+model.fit(x=train_X, y=train_y, epochs=epochs, verbose=1)
 
 
 def clean_text(text):
@@ -105,7 +102,13 @@ def bag_of_words(text, vocab):
 
 def pred_class(text, vocab, labels):
     bow = bag_of_words(text, vocab)
+    # print(f'vocab {vocab}')
+    # print(f'labels {labels}')
+    # print(f'bow {bow}')
     result = model.predict(np.array([bow]))[0]
+    # print(f'result {result}')
+    # print(result.sort(reverse=True))
+    # print(labels[np.where(result == result.max())]) 
     thresh = 0.2
     y_pred = [[idx, res] for idx, res in enumerate(result) if res > thresh]
 
@@ -129,20 +132,14 @@ def get_response(intents_list, intents_json):
 @sio.event
 def connect(sid, environ):
     print('connect', sid)
-    sio.emit('message', "hello, I am leo", room=sid)
-
 
 @sio.event
-def message(sid, msg):
-    print(f'($): {msg}')
-    intents = pred_class(msg, words, classes)
-    result = get_response(intents, data)
-    sio.emit('message', result, room=sid)
-
-
-@sio.event
-def disconnect(sid):
-    print(f'bye user {sid}')
+def message(sid, res):
+    print(f'($): {res["msg"]}')
+    intents = pred_class(res["msg"], words, classes)
+    print(intents)
+    response = get_response(intents, data)
+    sio.emit('message', {'user': 'Leo' , 'msg': response}, room=sid)
 
 
 @sio.event
